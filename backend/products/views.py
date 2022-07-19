@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, mixins
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -15,7 +15,7 @@ class ProductListCreateAPIView(generics.ListCreateAPIView):
     def perfom_create(self, serializer):
         # serializer.save(user=self.request.user)
         title = serializer.validated_data.get('title')
-        content = serializer.validated_data.get('content') #or None
+        content = serializer.validated_data.get('content') or None
         if content is None:
             content = title
         serializer.save(content=content)
@@ -65,6 +65,37 @@ product_destroy_view = ProductDestroyAPIView.as_view()
 #     # lookup_field = "pk"
 
 # product_list_view = ProductListAPIView.as_view()
+
+class ProductMixinView(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.ListModelMixin,
+    generics.GenericAPIView):
+
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    lookup_field = 'pk'
+
+    def get(self, request, *args, **kwargs):
+        print(args, kwargs)
+        pk = kwargs.get('pk')
+        if pk is not None:
+            return self.retrieve(request, *args, **kwargs)
+        return self.list(request, *args, **kwargs)
+    
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def perfom_create(self, serializer):
+        # serializer.save(user=self.request.user)
+        title = serializer.validated_data.get('title')
+        content = serializer.validated_data.get('content') or None
+        if content is None:
+            content = "This is a single view doing cool stuff"
+        serializer.save(content=content)
+
+product_mixin_view = ProductMixinView.as_view()
+
 
 @api_view(['GET', 'POST'])
 def product_alt_view(request, pk=None, *args, **kwargs):
